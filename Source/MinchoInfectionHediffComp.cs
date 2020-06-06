@@ -11,16 +11,16 @@ namespace RW_Mincho
 		{
 			base.CompPostTick(ref severityAdjustment);
 			float severity = this.parent.Severity;
-			bool flag = severity >= 0.75f && !this.finalStage;
-			if (flag)
+			bool isFinalStage = severity >= 0.75f && !this.finalStage;
+			if (isFinalStage)
 			{
 				this.parent.comps.RemoveAll((HediffComp x) => x is HediffComp_TendDuration);
 				this.finalStage = true;
 			}
-			bool flag2 = severity >= 1f;
-			if (flag2)
+			bool isPassedMinchoTrans = severity >= 1f;
+			if (isPassedMinchoTrans)
 			{
-				MinchoGenerator.GenerateMincho(base.Pawn, this.parent);
+				MinchoGenerator.ConvertToMincho(base.Pawn, this.parent);
 			}
 		}
 	}
