@@ -43,10 +43,9 @@ namespace RW_Mincho
 			forbiddenStrings = new HashSet<string>();
 			foreach (var match in matches)
 				forbiddenStrings.Add(((Match)match).Value);
-
 		}
 		public static HashSet<String> forbiddenStrings;
-		public static void GenerateMincho(Pawn originalPawn, Hediff hediff)
+		public static void ConvertToMincho(Pawn originalPawn, Hediff hediff)
 		{
 			CreateMinchoFilth(originalPawn);
 			(var generatedPawn, var isWildPawn) = CreateReplacedPawn(originalPawn);
@@ -79,7 +78,7 @@ namespace RW_Mincho
 			false, false, false, false, false, 0f, false, false, false, false, false, false,
 			false, false, 0, null, 0, null, null, null, null, null, 
 			originalPawn.ageTracker.AgeBiologicalYearsFloat, originalPawn.ageTracker.AgeChronologicalYearsFloat,
-				null, 0, null, null, null);
+				null, 0, "Temp", "Temp", null);
 
 			// set faction of pawn
 			if(originalPawn.Faction == Faction.OfPlayer || originalPawn.IsPrisonerOfColony)
@@ -89,15 +88,19 @@ namespace RW_Mincho
 			else
 				isWildMan = true;
 
-			var backstories = GetBackstory(originalPawn);
+			(var childhood, var adult, var faction) = GetBackstoryAndFaction(originalPawn);
 
 			// generate pawn and create 
 			var generatedPawn = PawnGenerator.GeneratePawn(generationRequest);
-			generatedPawn.story.childhood = backstories.childhood;
-			generatedPawn.story.adulthood = backstories.adult;
+			generatedPawn.story.childhood = childhood;
+			generatedPawn.story.adulthood = adult;
+			generatedPawn.SetFaction(faction, null);
 
 			TranslatePawnRelations(originalPawn, generatedPawn);
 			RemoveForbiddenTrait(ref generatedPawn);
+			CopyName(originalPawn, generatedPawn);
+			generatedPawn.skills = originalPawn.skills; // move skills
+
 
 			return (generatedPawn, isWildMan);
 		}
@@ -107,6 +110,15 @@ namespace RW_Mincho
 			RemoveRelationFromOtherRelatedPawns(from);
 			foreach(var relation in from.relations.DirectRelations)
 				to.relations.AddDirectRelation(relation.def, relation.otherPawn);
+		}
+
+		private static void CopyName(Pawn from, Pawn to)
+		{
+			var name = from.Name;
+			if(name is NameTriple triple)
+				to.Name = new NameTriple(triple.First, triple.Nick, triple.Last);
+			else if(name is NameSingle single)
+				to.Name = new NameSingle(single.Name, single.Numerical);
 		}
 
 		private static void RemoveRelationFromOtherRelatedPawns(Pawn pawn)
@@ -128,9 +140,50 @@ namespace RW_Mincho
 					pawn.story.traits.allTraits.Remove(trait);
 		}
 
-		private static (Backstory childhood, Backstory adult) GetBackstory(in Pawn originalPawn)
+		private static (Backstory childhood, Backstory adult, Faction faction) GetBackstoryAndFaction(in Pawn originalPawn)
 		{ // TODO : 폰의 상태에 따른 민초 백스토리 설정
-			return (null, null);
+			Backstory childHoodBackstory = null;
+			Faction faction = null;
+			string Identifier = string.Empty;
+			if(originalPawn.IsColonist) // 정착민
+			{
+				Identifier = BackstoryDatabase.GetIdentifierClosestMatch("Mincho_Infection_Colonist");
+				faction = Faction.OfPlayer;
+			}
+			else if(originalPawn.IsPrisoner) // 죄수
+			{
+				Identifier = BackstoryDatabase.GetIdentifierClosestMatch("Mincho_Infection_Prisoner");
+				faction = Faction.OfPlayer;
+			}
+			else if(originalPawn.Faction == null) // 야인
+				Identifier = BackstoryDatabase.GetIdentifierClosestMatch("Mincho_Infection_Wildman");
+			else if(originalPawn.Faction.AllyOrNeutralTo(Faction.OfPlayer)) // 적대
+				Identifier = BackstoryDatabase.GetIdentifierClosestMatch("Mincho_Infection_NPC");
+			else if(originalPawn.Faction.HostileTo(Faction.OfPlayer))
+				Identifier = BackstoryDatabase.GetIdentifierClosestMatch("Mincho_Infection_Pirate");
+			else if(originalPawn.RaceProps.intelligence == Intelligence.Humanlike)
+			{ // 동물
+				if(originalPawn.Faction == Faction.OfPlayer)
+				{
+					Identifier = BackstoryDatabase.GetIdentifierClosestMatch("Mincho_Infection_Animal_Colony");
+					faction = Faction.OfPlayer;
+				}
+				else if(originalPawn.Faction == null)
+					Identifier = BackstoryDatabase.GetIdentifierClosestMatch("Mincho_Infection_Animal_Wild");
+				else if(originalPawn.Faction.HostileTo(Faction.OfPlayer))
+					Identifier = BackstoryDatabase.GetIdentifierClosestMatch("Mincho_Infection_Animal_Pirate");
+				else if(originalPawn.Faction.AllyOrNeutralTo(Faction.OfPlayer))
+				{
+					Identifier = BackstoryDatabase.GetIdentifierClosestMatch("Mincho_Infection_Animal_NPC");
+					faction = originalPawn.Faction;
+				}
+			}
+			else
+				Identifier = BackstoryDatabase.GetIdentifierClosestMatch("Mincho_Infection_Undefined");
+
+			childHoodBackstory = BackstoryDatabase.allBackstories[Identifier];
+
+			return (childHoodBackstory, null, faction);
 		}
 	}
 }
