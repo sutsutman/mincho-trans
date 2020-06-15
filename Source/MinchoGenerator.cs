@@ -12,6 +12,7 @@ using System.Collections;
 namespace RW_Mincho
 {
 	// Token: 0x02000002 RID: 2
+
 	public static class MinchoGenerator
 	{
 		static MinchoGenerator()
@@ -99,7 +100,7 @@ namespace RW_Mincho
 			TranslatePawnRelations(originalPawn, generatedPawn);
 			RemoveForbiddenTrait(ref generatedPawn);
 			CopyName(originalPawn, generatedPawn);
-			generatedPawn.skills = originalPawn.skills; // move skills
+			generatedPawn.skills = originalPawn.skills ?? generatedPawn.skills; // move skills
 
 
 			return (generatedPawn, isWildMan);
@@ -147,39 +148,57 @@ namespace RW_Mincho
 			string Identifier = string.Empty;
 			if (originalPawn.IsColonist) // 정착민
 			{
-				Identifier = "Mincho_Infection_Colonist";
+				Identifier = "MColonist91";
 				faction = Faction.OfPlayer;
 			}
 			else if (originalPawn.IsPrisoner) // 죄수
 			{
-				Identifier = "Mincho_Infection_Prisoner";
+				Identifier = "MPrisoner96";
 				faction = Faction.OfPlayer;
 			}
 			else if (originalPawn.Faction == null) // 야인
-				Identifier = "Mincho_Infection_Wildman";
-			else if (originalPawn.Faction.AllyOrNeutralTo(Faction.OfPlayer)) // 적대
-				Identifier = "Mincho_Infection_NPC";
-			else if (originalPawn.Faction.HostileTo(Faction.OfPlayer))
-				Identifier = "Mincho_Infection_Pirate";
+			{
+				Identifier = "MWildman48";
+				faction = null;
+			}
+			else if (originalPawn.Faction.AllyOrNeutralTo(Faction.OfPlayer)) // 중립우호
+			{
+				Identifier = "MNPC5";
+				faction = originalPawn.Faction;
+			}
+			else if (originalPawn.Faction.HostileTo(Faction.OfPlayer)) // 적대
+			{
+				Identifier = "MPirate51";
+				faction = null;
+			}
 			else if (originalPawn.RaceProps.intelligence == Intelligence.Humanlike)
 			{ // 동물
-				if (originalPawn.Faction == Faction.OfPlayer)
+				if (originalPawn.Faction == Faction.OfPlayer) // 아군동물
 				{
-					Identifier = "Mincho_Infection_Animal_Colony";
+					Identifier = "MAnimalColony19";
 					faction = Faction.OfPlayer;
 				}
-				else if (originalPawn.Faction == null)
-					Identifier = "Mincho_Infection_Animal_Wild";
-				else if (originalPawn.Faction.HostileTo(Faction.OfPlayer))
-					Identifier = "Mincho_Infection_Animal_Pirate";
-				else if (originalPawn.Faction.AllyOrNeutralTo(Faction.OfPlayer))
+				else if (originalPawn.Faction == null )// 야생동물
 				{
-					Identifier = "Mincho_Infection_Animal_NPC";
+					Identifier = "MAnimalWild43";
+					faction = null;
+				}
+				else if (originalPawn.Faction.HostileTo(Faction.OfPlayer)) // 적대동물
+				{
+					Identifier = "MAnimalPirate24";
+					faction = null;
+				}
+				else if (originalPawn.Faction.AllyOrNeutralTo(Faction.OfPlayer)) // 중립우호동물
+				{
+					Identifier = "MAnimalNPC62";
 					faction = originalPawn.Faction;
 				}
 			}
-			else
-				Identifier = "Mincho_Infection_Undefined";
+			else //나머지
+			{
+				Identifier = "MUndefined28";
+				faction = originalPawn.Faction;
+			}
 
 			childHoodBackstory = BackstoryDatabase.allBackstories[Identifier];
 
